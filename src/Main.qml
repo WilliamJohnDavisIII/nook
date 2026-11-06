@@ -24,6 +24,8 @@ ApplicationWindow {
     readonly property bool still: preferences.reducedMotion
     readonly property string serif: "Noto Serif"
     readonly property string mono: "JetBrainsMono Nerd Font"
+    readonly property string confirmButton: gamepad.nintendoLayout ? "east" : "south"
+    readonly property string backButton: gamepad.nintendoLayout ? "south" : "east"
 
     property string overlay: ""
     property string selectedPath: ""
@@ -64,6 +66,8 @@ ApplicationWindow {
             return
         shelf.currentIndex = (shelf.currentIndex + delta + library.count) % library.count
         selectedPath = library.gameAt(shelf.currentIndex).path
+        if (library.count > 1)
+            playMove()
     }
 
     function restoreSelection() {
@@ -116,8 +120,8 @@ ApplicationWindow {
         switch (name) {
         case "left": move(-1); break
         case "right": move(1); break
-        case "shelfPrevious": library.stepShelf(-1); break
-        case "shelfNext": library.stepShelf(1); break
+        case "shelfPrevious": library.stepShelf(-1); shelfSound.play(); break
+        case "shelfNext": library.stepShelf(1); shelfSound.play(); break
         case "play": play(); break
         case "back": overlay = "quit"; break
         case "music": toggleMusic(); break
@@ -189,6 +193,21 @@ ApplicationWindow {
     Shortcut { sequence: "M"; context: Qt.ApplicationShortcut; onActivated: win.act("music") }
     Shortcut { sequences: ["?", "Shift+/", "F1"]; context: Qt.ApplicationShortcut; onActivated: win.act("help") }
     Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; onActivated: Qt.quit() }
+
+    // A soft ring between games, and a deeper one between shelves. They ring for
+    // longer than it takes to scroll, so each new one takes the next voice rather
+    // than cutting the last one off.
+    property int nextVoice: 0
+    function playMove() {
+        moveVoices[nextVoice].play()
+        nextVoice = (nextVoice + 1) % moveVoices.length
+    }
+    readonly property var moveVoices: [moveOne, moveTwo, moveThree, moveFour]
+    SoundEffect { id: moveOne; source: "qrc:/sounds/move.wav" }
+    SoundEffect { id: moveTwo; source: "qrc:/sounds/move.wav" }
+    SoundEffect { id: moveThree; source: "qrc:/sounds/move.wav" }
+    SoundEffect { id: moveFour; source: "qrc:/sounds/move.wav" }
+    SoundEffect { id: shelfSound; source: "qrc:/sounds/shelf.wav" }
 
     // Off by default. Fades out rather than cutting when a game opens.
     MediaPlayer {
@@ -377,10 +396,10 @@ ApplicationWindow {
                 anchors.bottomMargin: 66 * win.u
                 spacing: 30 * win.u
 
-                PadHint { visible: library.count > 0; position: "south"; keyLabel: "Enter"; label: qsTr("Play"); unit: win.u }
+                PadHint { visible: library.count > 0; position: win.confirmButton; keyLabel: "Enter"; label: qsTr("Play"); unit: win.u }
                 PadHint { position: "shoulder"; keyLabel: "Tab"; label: qsTr("Shelf"); unit: win.u }
                 PadHint { position: "north"; keyLabel: "M"; label: qsTr("Music"); unit: win.u }
-                PadHint { position: "east"; keyLabel: "Esc"; label: qsTr("Close"); unit: win.u }
+                PadHint { position: win.backButton; keyLabel: "Esc"; label: qsTr("Close"); unit: win.u }
             }
 
             // Nothing on this shelf yet.
@@ -451,11 +470,11 @@ ApplicationWindow {
                 Repeater {
                     model: [
                         [qsTr("Choose a game"), qsTr("D-pad or stick"), "← →"],
-                        [qsTr("Play"), qsTr("Bottom button"), "Enter"],
+                        [qsTr("Play"), gamepad.nintendoLayout ? qsTr("A button") : qsTr("Bottom button"), "Enter"],
                         [qsTr("Change shelf"), qsTr("Shoulders or up/down"), "Tab"],
                         [qsTr("Music"), qsTr("Top button"), "M"],
                         [qsTr("This help"), qsTr("Start"), "F1"],
-                        [qsTr("Close the drawer"), qsTr("Right button"), "Q"],
+                        [qsTr("Close the drawer"), gamepad.nintendoLayout ? qsTr("B button") : qsTr("Right button"), "Q"],
                         [qsTr("Leave a game"), qsTr("Hold Select + Start"), ""],
                         [qsTr("Game menu, in RetroArch"), qsTr("Home button"), ""]
                     ]
@@ -486,8 +505,8 @@ ApplicationWindow {
                 }
                 Row {
                     spacing: 30 * win.u
-                    PadHint { position: "south"; keyLabel: "Enter"; label: qsTr("Close"); unit: win.u }
-                    PadHint { position: "east"; keyLabel: "Esc"; label: qsTr("Stay"); unit: win.u }
+                    PadHint { position: win.confirmButton; keyLabel: "Enter"; label: qsTr("Close"); unit: win.u }
+                    PadHint { position: win.backButton; keyLabel: "Esc"; label: qsTr("Stay"); unit: win.u }
                 }
             }
         }
@@ -515,7 +534,7 @@ ApplicationWindow {
                     font.pixelSize: Math.round(18 * win.u)
                     lineHeight: 1.3
                 }
-                PadHint { position: "south"; keyLabel: "Enter"; label: qsTr("Okay"); unit: win.u }
+                PadHint { position: win.confirmButton; keyLabel: "Enter"; label: qsTr("Okay"); unit: win.u }
             }
         }
     }

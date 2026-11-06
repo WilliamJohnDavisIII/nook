@@ -17,6 +17,7 @@ struct LaunchPaths {
     QString coreDirectory = "/usr/lib/libretro";
     QString retroarch;
     QString armsx2;
+    QString dolphin;
 };
 
 // Starts a game in the right emulator and watches it until it ends.

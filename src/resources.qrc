@@ -12,6 +12,8 @@
         <file alias="consoles/ps1.svg">consoles/ps1.svg</file>
         <file alias="consoles/gc.svg">consoles/gc.svg</file>
         <file alias="consoles/ps2.svg">consoles/ps2.svg</file>
+        <file alias="sounds/move.wav">sounds/move.wav</file>
+        <file alias="sounds/shelf.wav">sounds/shelf.wav</file>
         <file alias="i18n/en.json">i18n/en.json</file>
     </qresource>
 </RCC>

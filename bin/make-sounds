@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+# Draws the drawer's sounds from scratch, so nothing here is sampled from anywhere.
+# Round, close and quiet: the ring of a struck metal bar with the edge taken off.
+import math
+import pathlib
+import struct
+import wave
+
+RATE = 44100
+METAL = [(1, 1.0, .34), (1.5, .16, .26), (2.756, .10, .20)]
+
+
+def render(path, seconds, base, glide, attack, decay, room, level, cutoff):
+    count = int(RATE * seconds)
+    # A very short, dark room: enough to soften it without pushing it away.
+    delays = [int(RATE * d) for d in (.017, .023, .031, .041)]
+    lines = [[0.0] * d for d in delays]
+    positions = [0] * 4
+    damp = [0.0] * 4
+    phases = [0.0] * len(METAL)
+    low1 = low2 = 0.0
+    alpha = 1 - math.exp(-2 * math.pi * cutoff / RATE)
+    samples = []
+    for i in range(count):
+        t = i / RATE
+        # A raised-cosine rise has no corner in it for the ear to catch.
+        rise = 0.5 - 0.5 * math.cos(math.pi * min(1.0, t / attack))
+        envelope = rise * math.exp(-t / decay)
+        slide = 1 + glide * (1 - math.exp(-t / 0.14))
+        dry = 0.0
+        for k, (ratio, amp, fall) in enumerate(METAL):
+            phases[k] += 2 * math.pi * base * ratio * slide / RATE
+            dry += amp * math.exp(-t / fall) * math.sin(phases[k])
+        dry *= envelope
+        wet = 0.0
+        for k in range(4):
+            y = lines[k][positions[k]]
+            damp[k] += 0.25 * (y - damp[k])
+            lines[k][positions[k]] = dry + damp[k] * 0.62
+            positions[k] = (positions[k] + 1) % delays[k]
+            wet += y
+        # Two gentle low-pass stages shave off whatever could sound harsh.
+        low1 += alpha * (dry + room * wet / 4 - low1)
+        low2 += alpha * (low1 - low2)
+        samples.append(low2 * min(1.0, (seconds - t) / 0.12))
+    peak = max(abs(s) for s in samples)
+    with wave.open(str(path), "wb") as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(RATE)
+        out.writeframes(b"".join(struct.pack("<h", int(s / peak * level * 32767)) for s in samples))
+
+
+folder = pathlib.Path(__file__).resolve().parent.parent / "src" / "sounds"
+render(folder / "move.wav", .70, 262, .045, .055, .20, .55, .28, 1500)
+# The same voice a fourth lower and a little longer, for changing shelves.
+render(folder / "shelf.wav", .85, 196, .045, .07, .25, .55, .28, 1300)

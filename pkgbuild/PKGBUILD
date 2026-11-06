@@ -1,6 +1,6 @@
 pkgname=nook
 pkgver=0.1.0
-pkgrel=6
+pkgrel=8
 pkgdesc='A calm little drawer for your retro games'
 arch=('aarch64' 'x86_64')
 license=('MIT')

@@ -1,6 +1,8 @@
 #include "gamepad.h"
 
 #include <QDateTime>
+#include <QFile>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <SDL3/SDL.h>
 #include <limits>
@@ -79,6 +81,25 @@ QStringList InputInterpreter::update(const InputFrame &frame, qint64 nowMs, bool
     return actions;
 }
 
+// SDL renames pads after whatever they imitate, so an 8BitDo in Xbox mode reaches
+// us as an "Xbox One S Controller". The kernel still has the name it reported.
+static QString deviceName(void *handle) {
+    auto *pad = static_cast<SDL_Gamepad *>(handle);
+    if (const char *path = SDL_GetGamepadPath(pad)) {
+        QFile file(QStringLiteral("/sys/class/input/%1/device/name").arg(QFileInfo(QString::fromUtf8(path)).fileName()));
+        if (file.open(QIODevice::ReadOnly)) {
+            const QString name = QString::fromUtf8(file.readAll()).trimmed();
+            if (!name.isEmpty())
+                return name;
+        }
+    }
+    return QString::fromUtf8(SDL_GetGamepadName(pad));
+}
+
+bool Gamepad::usesNintendoLayout(const QString &deviceName) {
+    return deviceName.contains("8bitdo", Qt::CaseInsensitive);
+}
+
 Gamepad::Gamepad(QObject *parent) : QObject(parent) {
     // HIDAPI would open the controller directly and can fight the emulator for
     // it. The plain evdev route lets both read the same pad side by side.
@@ -123,7 +144,8 @@ void Gamepad::refreshPads() {
             m_pads << pad;
     SDL_free(ids);
 
-    m_name = m_pads.isEmpty() ? QString() : QString::fromUtf8(SDL_GetGamepadName(static_cast<SDL_Gamepad *>(m_pads.first())));
+    m_name = m_pads.isEmpty() ? QString() : deviceName(m_pads.first());
+    m_nintendoLayout = usesNintendoLayout(m_name);
     emit connectedChanged();
 }
 
@@ -153,8 +175,8 @@ void Gamepad::poll() {
         frame.right |= button(SDL_GAMEPAD_BUTTON_DPAD_RIGHT) || stickX > StickThreshold;
         frame.up |= button(SDL_GAMEPAD_BUTTON_DPAD_UP) || stickY < -StickThreshold;
         frame.down |= button(SDL_GAMEPAD_BUTTON_DPAD_DOWN) || stickY > StickThreshold;
-        frame.south |= button(SDL_GAMEPAD_BUTTON_SOUTH);
-        frame.east |= button(SDL_GAMEPAD_BUTTON_EAST);
+        frame.south |= button(m_nintendoLayout ? SDL_GAMEPAD_BUTTON_EAST : SDL_GAMEPAD_BUTTON_SOUTH);
+        frame.east |= button(m_nintendoLayout ? SDL_GAMEPAD_BUTTON_SOUTH : SDL_GAMEPAD_BUTTON_EAST);
         frame.north |= button(SDL_GAMEPAD_BUTTON_NORTH);
         frame.west |= button(SDL_GAMEPAD_BUTTON_WEST);
         frame.shoulderLeft |= button(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);

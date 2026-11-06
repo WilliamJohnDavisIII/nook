@@ -36,6 +36,7 @@ class Gamepad : public QObject {
     Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
     Q_PROPERTY(QString name READ name NOTIFY connectedChanged)
     Q_PROPERTY(bool gameRunning READ gameRunning WRITE setGameRunning NOTIFY gameRunningChanged)
+    Q_PROPERTY(bool nintendoLayout READ nintendoLayout NOTIFY connectedChanged)
 
 public:
     explicit Gamepad(QObject *parent = nullptr);
@@ -45,6 +46,11 @@ public:
     QString name() const { return m_name; }
     bool gameRunning() const { return m_gameRunning; }
     void setGameRunning(bool running);
+    bool nintendoLayout() const { return m_nintendoLayout; }
+
+    // 8BitDo pads are labelled like a Super Nintendo's: A on the right, B at the
+    // bottom. Even in Xbox mode that holds, so "confirm" belongs on the right.
+    static bool usesNintendoLayout(const QString &deviceName);
 
 signals:
     void action(const QString &name);
@@ -58,6 +64,7 @@ private:
     QList<void *> m_pads;
     QString m_name;
     bool m_available = false;
+    bool m_nintendoLayout = false;
     bool m_gameRunning = false;
     QTimer m_timer;
     InputInterpreter m_interpreter;

@@ -9,18 +9,18 @@ Put games in `~/Games/roms/<system>/` (`snes`, `ps1`, `gc`, `ps2`) and they appe
 | Action | Controller | Keyboard |
 |---|---|---|
 | Choose a game | D-pad or left stick | `←` `→` |
-| Play | Bottom button | `Enter` or `Space` |
+| Play | A on 8BitDo pads, the bottom button on others | `Enter` or `Space` |
 | Change shelf | Shoulders, or up and down | `Tab` |
 | Music | Top button | `M` |
 | Help | Start | `F1` or `?` |
-| Close the drawer | Right button, then confirm | `Q` |
+| Close the drawer | B on 8BitDo pads, the right button on others, then confirm | `Q` |
 | Leave a game | Hold Select + Start for a second | |
 
 ## What it needs
 
 - **SNES, PS1, GameCube:** RetroArch with `snes9x`, `mednafen_psx_hw` and `dolphin` cores. On Omarchy: `omarchy-install-gaming-retroarch`.
 - **PS1:** a BIOS such as `~/Games/bios/scph5501.bin`.
-- **GameCube:** Dolphin's `Sys` folder at `~/Games/bios/dolphin-emu/Sys`.
+- **GameCube:** standalone Dolphin (`dolphin-emu`) if it's installed, which Apple Silicon needs. Otherwise the RetroArch core, with Dolphin's `Sys` folder at `~/Games/bios/dolphin-emu/Sys`.
 - **PS2:** an ARMSX2 AppImage in `~/.local/opt/armsx2/`, and a BIOS in `~/Games/bios/ps2/`.
 
 Nook never changes your game files. If something's missing, it says what when you try to play.

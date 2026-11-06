@@ -123,6 +123,21 @@ private slots:
         QVERIFY(Launcher::plan("gc", game, paths).problem.isEmpty());
     }
 
+    void standaloneDolphinWinsForGameCube()
+    {
+        QTemporaryDir root;
+        const QString game = root.filePath("game.rvz");
+        write(game, "x");
+        LaunchPaths paths;
+        paths.gamesRoot = root.path();
+        paths.dolphin = "/usr/bin/dolphin-emu";
+        const auto plan = Launcher::plan("gc", game, paths);
+        QCOMPARE(plan.problem, QString());
+        QCOMPARE(plan.program, QString("/usr/bin/dolphin-emu"));
+        QVERIFY(plan.arguments.contains("--exec=" + game));
+        QVERIFY(plan.arguments.contains("--batch"));
+    }
+
     void missingPiecesAreExplained()
     {
         QTemporaryDir root;
@@ -244,6 +259,14 @@ private slots:
         // Still held as the game ends: this must not start another game.
         QVERIFY(input.update(play, 100, false).isEmpty());
         QVERIFY(input.update(play, 200, false).isEmpty());
+    }
+
+    void eightBitDoPadsConfirmOnTheRight()
+    {
+        QVERIFY(Gamepad::usesNintendoLayout("8BitDo Pro 2"));
+        QVERIFY(Gamepad::usesNintendoLayout("8bitdo SN30 Pro"));
+        QVERIFY(!Gamepad::usesNintendoLayout("Xbox One Wireless Controller"));
+        QVERIFY(!Gamepad::usesNintendoLayout(""));
     }
 
     void themeFallsBack()

@@ -31,6 +31,7 @@ LaunchPaths Launcher::defaultPaths(const QString &gamesRoot) {
     LaunchPaths paths;
     paths.gamesRoot = gamesRoot;
     paths.retroarch = QStandardPaths::findExecutable("retroarch");
+    paths.dolphin = QStandardPaths::findExecutable("dolphin-emu");
 
     // The newest AppImage wins by version order, so updating ARMSX2 is just
     // dropping the new file in the folder. Only the build for this machine's
@@ -63,6 +64,14 @@ LaunchPlan Launcher::plan(const QString &system, const QString &path, const Laun
         }
         plan.program = paths.armsx2;
         plan.arguments = {"-nogui", "-fullscreen", "--", path};
+        return plan;
+    }
+
+    // Standalone Dolphin wins when it's installed: on some systems (Apple Silicon
+    // Linux among them) the RetroArch core can't start its renderer at all.
+    if (system == "gc" && !paths.dolphin.isEmpty()) {
+        plan.program = paths.dolphin;
+        plan.arguments = {"--batch", "--config=Dolphin.Display.Fullscreen=True", "--exec=" + path};
         return plan;
     }
 
