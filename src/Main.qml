@@ -245,7 +245,7 @@ ApplicationWindow {
             anchors.fill: parent
             art: win.current ? win.current.art : ""
             hue: win.current ? win.current.hue : 220
-            hasGame: !!win.current
+            hasGame: library.count > 0
             reducedMotion: win.still
             paused: launcher.running
             unit: win.u

@@ -63,6 +63,17 @@ const SystemInfo *Library::systemById(const QString &id) {
     return nullptr;
 }
 
+QString Library::withoutPatchName(QString name) {
+    // "English" alone can be part of a real title, so it counts only with a
+    // version or the word "patch" beside it.
+    static const QRegularExpression patch(R"(\s+((english|eng)(\s+patch(\s+v?\d[\d.]*)?|\s+v?\d[\d.]*)|translated|translation|patched)\s*$)",
+                                          QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression version(R"(\s+v\d+(\.\d+)*\s*$)", QRegularExpression::CaseInsensitiveOption);
+    name.remove(patch);
+    name.remove(version);
+    return name;
+}
+
 QString Library::cleanTitle(const QString &baseName) {
     static const QRegularExpression tags(R"(\s*[\(\[][^\)\]]*[\)\]])");
     static const QRegularExpression disc(R"(\((Disc|Disk)\s*([0-9]+)[^\)]*\))", QRegularExpression::CaseInsensitiveOption);
@@ -73,7 +84,7 @@ QString Library::cleanTitle(const QString &baseName) {
         title.replace('_', ' ');
     const auto discMatch = disc.match(title);
     title.remove(tags);
-    title = title.simplified();
+    title = withoutPatchName(title.simplified());
 
     // Catalog names file "The" at the end to sort; people read it at the front.
     const auto articleMatch = article.match(title);

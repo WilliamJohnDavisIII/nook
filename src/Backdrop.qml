@@ -12,15 +12,89 @@ Item {
     property bool paused: false
     property real unit: 1
 
-    property string shown: ""
-    property bool useFirst: true
+    // How long one game's colours take to melt in. Everything else follows it.
+    readonly property int blendTime: reducedMotion ? 0 : 1500
+    property int shownHue: hue
+    property string shownKey: ""
 
-    onArtChanged: {
-        if (useFirst)
-            second.source = art === "" ? "" : "file://" + art
-        else
-            first.source = art === "" ? "" : "file://" + art
-        useFirst = !useFirst
+    onArtChanged: settle.start()
+    onHueChanged: settle.start()
+    onHasGameChanged: settle.start()
+    Component.onCompleted: spawn()
+
+    // Changing shelves passes through a moment with no game, then the first game,
+    // then the right one, all within a few frames. Waiting a beat means only where
+    // it actually lands reaches the screen, and while scrolling it still catches
+    // every game you pass.
+    Timer {
+        id: settle
+        interval: 80
+        onTriggered: room.spawn()
+    }
+
+    function spawn() {
+        const key = hasGame ? art + "|" + hue : "empty"
+        if (key === shownKey)
+            return
+        shownKey = key
+        shownHue = hue
+        moodLayer.createObject(stack, { art: art, tint: hue, empty: !hasGame })
+    }
+
+    // Once a layer has fully faded in, everything under it is hidden for good.
+    function covered(layer) {
+        for (const child of stack.children) {
+            if (child === layer)
+                return
+            child.destroy()
+        }
+    }
+
+    // One game's colours. A layer's picture never changes once it exists: each new
+    // game gets a new layer that fades in over all the others, so however fast you
+    // scroll, the wall is always blending through them and can never jump.
+    Component {
+        id: moodLayer
+        Item {
+            id: layer
+            property string art: ""
+            property int tint: 220
+            property bool empty: false
+            readonly property bool loaded: art === "" || picture.status === Image.Ready || picture.status === Image.Error
+
+            anchors.fill: parent
+            opacity: 0
+
+            function reveal() {
+                if (loaded && !fade.running && opacity === 0)
+                    fade.start()
+            }
+            onLoadedChanged: reveal()
+            Component.onCompleted: reveal()
+
+            NumberAnimation {
+                id: fade
+                target: layer
+                property: "opacity"
+                to: 1
+                duration: room.blendTime
+                easing.type: Easing.InOutSine
+                onFinished: room.covered(layer)
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                color: layer.empty ? theme.surface : Qt.hsla(layer.tint / 360, 0.3, theme.dark ? 0.2 : 0.8, 1)
+            }
+            Image {
+                id: picture
+                anchors.fill: parent
+                source: layer.art === "" ? "" : "file://" + layer.art
+                fillMode: Image.PreserveAspectCrop
+                sourceSize: Qt.size(20, 20)
+                asynchronous: true
+            }
+        }
     }
 
     Rectangle { anchors.fill: parent; color: theme.background }
@@ -41,29 +115,10 @@ Item {
             blurMultiplier: 3
         }
 
-        Rectangle {
+        Item {
+            id: stack
+            objectName: "moodStack"
             anchors.fill: parent
-            color: room.hasGame ? Qt.hsla(room.hue / 360, 0.3, theme.dark ? 0.2 : 0.8, 1) : theme.surface
-            Behavior on color { enabled: !room.reducedMotion; ColorAnimation { duration: 900 } }
-        }
-
-        Image {
-            id: first
-            anchors.fill: parent
-            fillMode: Image.PreserveAspectCrop
-            sourceSize: Qt.size(20, 20)
-            asynchronous: true
-            opacity: room.useFirst && status === Image.Ready ? 1 : 0
-            Behavior on opacity { enabled: !room.reducedMotion; NumberAnimation { duration: 900 } }
-        }
-        Image {
-            id: second
-            anchors.fill: parent
-            fillMode: Image.PreserveAspectCrop
-            sourceSize: Qt.size(20, 20)
-            asynchronous: true
-            opacity: !room.useFirst && status === Image.Ready ? 1 : 0
-            Behavior on opacity { enabled: !room.reducedMotion; NumberAnimation { duration: 900 } }
         }
 
         Repeater {
@@ -75,11 +130,11 @@ Item {
                 width: size
                 height: size
                 radius: size / 2
-                color: Qt.hsla(((room.hue + (index === 0 ? 30 : -40)) % 360 + 360) % 360 / 360, 0.34, theme.dark ? 0.34 : 0.72, 1)
+                color: Qt.hsla(((room.shownHue + (index === 0 ? 30 : -40)) % 360 + 360) % 360 / 360, 0.34, theme.dark ? 0.34 : 0.72, 1)
                 opacity: 0.55
                 x: room.width * (index === 0 ? 0.62 : -0.06) + wander * room.width * 0.12
                 y: room.height * (index === 0 ? -0.2 : 0.46) + wander * room.height * (index === 0 ? 0.12 : -0.1)
-                Behavior on color { enabled: !room.reducedMotion; ColorAnimation { duration: 1200 } }
+                Behavior on color { enabled: !room.reducedMotion; ColorAnimation { duration: room.blendTime; easing.type: Easing.InOutSine } }
 
                 property real wander: 0
                 SequentialAnimation on wander {

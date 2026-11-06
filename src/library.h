@@ -64,6 +64,8 @@ public:
     static const QList<SystemInfo> &systems();
     static const SystemInfo *systemById(const QString &id);
     static QString cleanTitle(const QString &baseName);
+    // Drops what a fan patch adds to a file's name: "Game English v2.00" is "Game".
+    static QString withoutPatchName(QString name);
     static QStringList thumbnailCandidates(const QString &baseName);
     // The playable files in a folder: a .cue hides the tracks it lists, and an
     // .m3u hides the discs it lists, so one game shows up once.

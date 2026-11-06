@@ -27,7 +27,7 @@ Nook never changes your game files. If something's missing, it says what when yo
 
 ## Box art
 
-Art comes from [libretro's thumbnail server](https://thumbnails.libretro.com) by file name, so each game's file name is sent there the first time it's seen. Art is cached in `~/.cache/nook/`. Your own picture at `~/Games/art/<system>/<file name>.png` always wins, and a game with no art gets a drawn cover.
+Art comes from [libretro's thumbnail server](https://thumbnails.libretro.com) by file name, so each game's file name is sent there the first time it's seen. If that name isn't one the server uses, Nook reads the server's list and picks the closest cover. Art is cached in `~/.cache/nook/`. Your own picture at `~/Games/art/<system>/<file name>.png` always wins, and a game with no art gets a drawn cover.
 
 ## Music
 

@@ -3,6 +3,7 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
+#include "artwork.h"
 #include "gamepad.h"
 #include "launcher.h"
 #include "library.h"
@@ -19,6 +20,9 @@ private slots:
         QCOMPARE(Library::cleanTitle("Moon_River_Racer"), QString("Moon River Racer"));
         QCOMPARE(Library::cleanTitle("Harbor Lights (USA) (Disc 2)"), QString::fromUtf8("Harbor Lights · Disc 2"));
         QCOMPARE(Library::cleanTitle("Plain Name"), QString("Plain Name"));
+        QCOMPARE(Library::cleanTitle("Live A Live English v2.00"), QString("Live A Live"));
+        QCOMPARE(Library::cleanTitle("Learning English"), QString("Learning English"));
+        QCOMPARE(Library::cleanTitle("Mother 3 English Patch v1.3"), QString("Mother 3"));
     }
 
     void thumbnailNamesFollowTheServersRules()
@@ -267,6 +271,52 @@ private slots:
         QVERIFY(Gamepad::usesNintendoLayout("8bitdo SN30 Pro"));
         QVERIFY(!Gamepad::usesNintendoLayout("Xbox One Wireless Controller"));
         QVERIFY(!Gamepad::usesNintendoLayout(""));
+    }
+
+    void coverSearchFindsWhatTheFileMeans()
+    {
+        const QStringList ps1{"Final Fantasy VII (Europe) (Disc 1)", "Final Fantasy VII (Japan) (Disc 1)",
+                              "Final Fantasy VII (USA) (Disc 2)", "Final Fantasy VII (USA) (Disc 1)",
+                              "Final Fantasy VIII (USA) (Disc 1)", "Final Fantasy VII (USA) (Demo)"};
+        QCOMPARE(Artwork::closestBoxart("Final Fantasy VII (T)", ps1), QString("Final Fantasy VII (USA) (Disc 1)"));
+
+        const QStringList snes{"Dragon Quest VI - Maboroshi no Daichi (Japan)", "Dragon Quest V - Tenkuu no Hanayome (Japan)",
+                               "Live A Live (Japan)", "Live A Live (Japan) [T-En by Aeon Genesis v2.00 Deluxe]"};
+        QCOMPARE(Artwork::closestBoxart("Dragon Quest V", snes), QString("Dragon Quest V - Tenkuu no Hanayome (Japan)"));
+        QCOMPARE(Artwork::closestBoxart("Live A Live English v2.00", snes), QString("Live A Live (Japan) [T-En by Aeon Genesis v2.00 Deluxe]"));
+        QCOMPARE(Artwork::closestBoxart("Live A Live", snes), QString("Live A Live (Japan)"));
+    }
+
+    void coverSearchIgnoresNamingStyle()
+    {
+        const QStringList catalog{"Final Fantasy VII (USA) (Disc 1)", "Legend of Zelda, The - A Link to the Past (USA)",
+                                  "Ratchet & Clank (USA)", "Luigi's Mansion (USA)", "Mega Man X (USA)", "Mega Man 10 (USA)",
+                                  "Metal Gear Solid 2 - Sons of Liberty (USA)", "Suikoden (USA)"};
+        QCOMPARE(Artwork::closestBoxart("final_fantasy_7", catalog), QString("Final Fantasy VII (USA) (Disc 1)"));
+        QCOMPARE(Artwork::closestBoxart("Final.Fantasy.VII", catalog), QString("Final Fantasy VII (USA) (Disc 1)"));
+        QCOMPARE(Artwork::closestBoxart("The Legend of Zelda - A Link to the Past", catalog), QString("Legend of Zelda, The - A Link to the Past (USA)"));
+        QCOMPARE(Artwork::closestBoxart("Ratchet and Clank", catalog), QString("Ratchet & Clank (USA)"));
+        QCOMPARE(Artwork::closestBoxart("Luigis Mansion", catalog), QString("Luigi's Mansion (USA)"));
+        QCOMPARE(Artwork::closestBoxart("Mega Man X", catalog), QString("Mega Man X (USA)"));
+        QCOMPARE(Artwork::closestBoxart("Metal Gear Solid II", catalog), QString("Metal Gear Solid 2 - Sons of Liberty (USA)"));
+        QCOMPARE(Artwork::closestBoxart("Suikoden - Special Edition", catalog), QString("Suikoden (USA)"));
+    }
+
+    void coverSearchWouldRatherFindNothingThanTheWrongGame()
+    {
+        const QStringList catalog{"Dragon Quest VI (Japan)", "Final Fantasy VIII (USA)", "Super Mario RPG Deluxe (USA)"};
+        QCOMPARE(Artwork::closestBoxart("Dragon Quest V", catalog), QString());
+        QCOMPARE(Artwork::closestBoxart("Final Fantasy VII (USA)", catalog), QString());
+        QCOMPARE(Artwork::closestBoxart("Super Mario RPG", catalog), QString());
+        QCOMPARE(Artwork::closestBoxart("", catalog), QString());
+    }
+
+    void theServersListIsRead()
+    {
+        const QByteArray page = "<a href=\"?C=N;O=D\">Name</a><a href=\"/parent/\">Up</a>"
+                                "<a href=\"Final%20Fantasy%20VII%20(USA)%20(Disc%201).png\">x</a>"
+                                "<a href=\"'99%20Koushien%20(Japan).png\">y</a>";
+        QCOMPARE(Artwork::parseCatalog(page), (QStringList{"Final Fantasy VII (USA) (Disc 1)", "'99 Koushien (Japan)"}));
     }
 
     void themeFallsBack()
