@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 312">
+  <defs>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8678d8"/><stop offset="1" stop-color="#6658bd"/></linearGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5c4eae"/><stop offset="1" stop-color="#2e2569"/></linearGradient>
+    <radialGradient id="lid" cx=".4" cy=".3" r=".85"><stop offset="0" stop-color="#9c8fe6"/><stop offset="1" stop-color="#5548a6"/></radialGradient>
+    <linearGradient id="handle" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7365cc"/><stop offset="1" stop-color="#40347f"/></linearGradient>
+    <linearGradient id="port" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16122f"/><stop offset="1" stop-color="#2d2558"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9e7f5"/><stop offset="1" stop-color="#9f9bbd"/></linearGradient>
+  </defs>
+  <!-- the carry handle behind the top -->
+  <path d="M90 76 V44 Q90 14 120 14 H240 Q270 14 270 44 V76" fill="none" stroke="url(#handle)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M90 66 V44 Q90 14 120 14 H240 Q270 14 270 44 V66" fill="none" stroke="#a79cf0" stroke-width="3" opacity=".6"/>
+  <path d="M84 60 H276 Q286 60 289 68 L326 136 H34 L71 68 Q74 60 84 60Z" fill="url(#top)"/>
+  <path d="M34 136 H326 V288 Q326 312 302 312 H58 Q34 312 34 288Z" fill="url(#front)"/>
+  <path d="M34 136 H326 V142 H34Z" fill="#b4a9f4" opacity=".75"/>
+  <!-- the round lid and its little disc window -->
+  <ellipse cx="172" cy="102" rx="84" ry="30" fill="#40347f"/>
+  <ellipse cx="172" cy="98" rx="82" ry="28" fill="url(#lid)"/>
+  <ellipse cx="172" cy="98" rx="50" ry="17" fill="none" stroke="#b6acf5" stroke-width="1.5" opacity=".75"/>
+  <ellipse cx="172" cy="98" rx="14" ry="5" fill="#3c3178"/>
+  <rect x="264" y="78" width="30" height="13" rx="6" fill="#4c3f96" transform="skewX(14) translate(-22 0)"/>
+  <rect x="266" y="108" width="26" height="12" rx="6" fill="url(#metal)" transform="skewX(14) translate(-30 0)"/>
+  <!-- memory card slots, four controller ports -->
+  <rect x="66" y="168" width="94" height="24" rx="4" fill="#1d1840"/><rect x="200" y="168" width="94" height="24" rx="4" fill="#1d1840"/>
+  <rect x="72" y="176" width="82" height="8" rx="2" fill="#0f0c26"/><rect x="206" y="176" width="82" height="8" rx="2" fill="#0f0c26"/>
+  <g>
+    <circle cx="82" cy="244" r="26" fill="url(#port)"/><circle cx="146" cy="244" r="26" fill="url(#port)"/><circle cx="214" cy="244" r="26" fill="url(#port)"/><circle cx="278" cy="244" r="26" fill="url(#port)"/>
+    <circle cx="82" cy="244" r="26" fill="none" stroke="#7d70cf" stroke-width="2"/><circle cx="146" cy="244" r="26" fill="none" stroke="#7d70cf" stroke-width="2"/><circle cx="214" cy="244" r="26" fill="none" stroke="#7d70cf" stroke-width="2"/><circle cx="278" cy="244" r="26" fill="none" stroke="#7d70cf" stroke-width="2"/>
+  </g>
+  <g fill="#c9c4ee"><rect x="76" y="236" width="12" height="4" rx="1"/><rect x="76" y="246" width="12" height="4" rx="1"/><rect x="140" y="236" width="12" height="4" rx="1"/><rect x="140" y="246" width="12" height="4" rx="1"/><rect x="208" y="236" width="12" height="4" rx="1"/><rect x="208" y="246" width="12" height="4" rx="1"/><rect x="272" y="236" width="12" height="4" rx="1"/><rect x="272" y="246" width="12" height="4" rx="1"/></g>
+  <circle cx="180" cy="290" r="4" fill="#6ddc9a"/>
+</svg>

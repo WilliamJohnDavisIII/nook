@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="Main.qml">Main.qml</file>
+        <file alias="Backdrop.qml">Backdrop.qml</file>
+        <file alias="GameCard.qml">GameCard.qml</file>
+        <file alias="GameCover.qml">GameCover.qml</file>
+        <file alias="ShelfTabs.qml">ShelfTabs.qml</file>
+        <file alias="PadHint.qml">PadHint.qml</file>
+        <file alias="NoteOverlay.qml">NoteOverlay.qml</file>
+        <file alias="ConsoleShelf.qml">ConsoleShelf.qml</file>
+        <file alias="consoles/snes.svg">consoles/snes.svg</file>
+        <file alias="consoles/ps1.svg">consoles/ps1.svg</file>
+        <file alias="consoles/gc.svg">consoles/gc.svg</file>
+        <file alias="consoles/ps2.svg">consoles/ps2.svg</file>
+        <file alias="i18n/en.json">i18n/en.json</file>
+    </qresource>
+</RCC>

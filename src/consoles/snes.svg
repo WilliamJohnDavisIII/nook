@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 262">
+  <defs>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9e7e2"/><stop offset="1" stop-color="#cfccc6"/></linearGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9c6c0"/><stop offset="1" stop-color="#94918b"/></linearGradient>
+    <linearGradient id="hump" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3f1ec"/><stop offset="1" stop-color="#d8d5cf"/></linearGradient>
+    <linearGradient id="cart" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#55535a"/><stop offset="1" stop-color="#2f2e33"/></linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8d6fc9"/><stop offset="1" stop-color="#57398f"/></linearGradient>
+    <linearGradient id="port" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26252a"/><stop offset="1" stop-color="#47464c"/></linearGradient>
+  </defs>
+  <path d="M72 66 H408 Q418 66 421 76 L458 160 H22 L59 76 Q62 66 72 66Z" fill="url(#top)"/>
+  <path d="M22 160 H458 V244 Q458 262 440 262 H40 Q22 262 22 244Z" fill="url(#front)"/>
+  <path d="M22 160 H458 V166 H22Z" fill="#fbfaf7" opacity=".75"/>
+  <!-- raised middle, with the cartridge standing in its slot -->
+  <path d="M140 60 H340 L368 136 H112Z" fill="#aeaba5"/>
+  <path d="M152 48 H328 L352 122 H128Z" fill="url(#hump)"/>
+  <path d="M186 4 H294 Q300 4 300 10 V86 H180 V10 Q180 4 186 4Z" fill="url(#cart)"/>
+  <g fill="#1f1e22" opacity=".8"><rect x="188" y="14" width="104" height="3"/><rect x="188" y="22" width="104" height="3"/><rect x="188" y="30" width="104" height="3"/></g>
+  <rect x="198" y="40" width="84" height="40" rx="3" fill="#e4dfd2"/>
+  <rect x="204" y="46" width="72" height="9" fill="#8d6fc9" opacity=".75"/>
+  <rect x="204" y="60" width="44" height="5" fill="#77726a"/><rect x="204" y="69" width="30" height="4" fill="#a39e94"/>
+  <path d="M170 84 H310 L318 104 H162Z" fill="#35343a"/>
+  <!-- power and reset on the left, eject on the right -->
+  <path d="M74 92 H116 L110 112 H64Z" fill="#b6b3ad"/><path d="M80 94 H104 L100 110 H72Z" fill="url(#purple)"/>
+  <path d="M58 122 H106 L98 144 H46Z" fill="#b6b3ad"/><path d="M78 124 H102 L95 142 H68Z" fill="url(#purple)"/>
+  <path d="M368 96 H410 L424 138 H378Z" fill="url(#purple)"/>
+  <path d="M368 96 H410 L412 102 H370Z" fill="#b89ee6"/>
+  <!-- controller ports and vents -->
+  <rect x="118" y="186" width="98" height="52" rx="10" fill="url(#port)"/><rect x="264" y="186" width="98" height="52" rx="10" fill="url(#port)"/>
+  <g fill="#a8a59f"><circle cx="146" cy="212" r="4"/><circle cx="167" cy="212" r="4"/><circle cx="188" cy="212" r="4"/><circle cx="292" cy="212" r="4"/><circle cx="313" cy="212" r="4"/><circle cx="334" cy="212" r="4"/></g>
+  <g fill="#7f7c76"><rect x="42" y="190" width="54" height="4" rx="2"/><rect x="42" y="202" width="54" height="4" rx="2"/><rect x="42" y="214" width="54" height="4" rx="2"/><rect x="42" y="226" width="54" height="4" rx="2"/><rect x="384" y="190" width="54" height="4" rx="2"/><rect x="384" y="202" width="54" height="4" rx="2"/><rect x="384" y="214" width="54" height="4" rx="2"/><rect x="384" y="226" width="54" height="4" rx="2"/></g>
+  <circle cx="240" cy="212" r="4" fill="#e0524a"/>
+</svg>

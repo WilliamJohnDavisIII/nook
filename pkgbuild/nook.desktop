@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Nook
+Comment=A calm little drawer for your retro games
+Exec=nook
+Icon=nook
+Terminal=false
+Categories=Game;Emulator;
+StartupWMClass=nook

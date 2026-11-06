@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 262">
+  <defs>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e4e4e0"/><stop offset="1" stop-color="#c8c8c3"/></linearGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c4c4bf"/><stop offset="1" stop-color="#8d8d89"/></linearGradient>
+    <radialGradient id="lid" cx=".42" cy=".3" r=".8"><stop offset="0" stop-color="#f1f1ed"/><stop offset="1" stop-color="#bfbfba"/></radialGradient>
+    <linearGradient id="button" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6adc4"/><stop offset="1" stop-color="#6c738f"/></linearGradient>
+    <linearGradient id="port" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2a2e"/><stop offset="1" stop-color="#4c4c52"/></linearGradient>
+  </defs>
+  <path d="M62 34 H418 Q430 34 433 44 L462 160 H18 L47 44 Q50 34 62 34Z" fill="url(#top)"/>
+  <path d="M18 160 H462 V240 Q462 262 440 262 H40 Q18 262 18 240Z" fill="url(#front)"/>
+  <path d="M18 160 H462 V166 H18Z" fill="#fbfbf8" opacity=".8"/>
+  <!-- the round lid -->
+  <ellipse cx="192" cy="104" rx="140" ry="54" fill="#a3a39e"/>
+  <ellipse cx="192" cy="98" rx="138" ry="52" fill="url(#lid)"/>
+  <ellipse cx="192" cy="98" rx="116" ry="42" fill="none" stroke="#d9d9d4" stroke-width="2"/>
+  <ellipse cx="192" cy="98" rx="84" ry="29" fill="none" stroke="#c9c9c4" stroke-width="1.5"/>
+  <ellipse cx="192" cy="98" rx="22" ry="8" fill="#b3b3ae"/>
+  <path d="M74 86 A120 44 0 0 1 240 56" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity=".75"/>
+  <!-- three round buttons on the right -->
+  <g>
+    <ellipse cx="376" cy="72" rx="19" ry="10" fill="#8b8b87"/><ellipse cx="376" cy="69" rx="18" ry="9" fill="url(#button)"/>
+    <ellipse cx="410" cy="104" rx="19" ry="10" fill="#8b8b87"/><ellipse cx="410" cy="101" rx="18" ry="9" fill="url(#button)"/>
+    <ellipse cx="376" cy="126" rx="29" ry="14" fill="#8b8b87"/><ellipse cx="376" cy="122" rx="28" ry="13" fill="url(#button)"/>
+  </g>
+  <circle cx="412" cy="76" r="4" fill="#58d68d"/><circle cx="412" cy="76" r="8" fill="#58d68d" opacity=".22"/>
+  <!-- memory card slots above controller ports -->
+  <rect x="96" y="178" width="84" height="12" rx="3" fill="#3a3a3f"/><rect x="300" y="178" width="84" height="12" rx="3" fill="#3a3a3f"/>
+  <rect x="88" y="198" width="100" height="44" rx="12" fill="url(#port)"/><rect x="292" y="198" width="100" height="44" rx="12" fill="url(#port)"/>
+  <g fill="#9f9f9a"><circle cx="116" cy="220" r="3.5"/><circle cx="138" cy="220" r="3.5"/><circle cx="160" cy="220" r="3.5"/><circle cx="320" cy="220" r="3.5"/><circle cx="342" cy="220" r="3.5"/><circle cx="364" cy="220" r="3.5"/></g>
+  <g fill="#7a7a76"><rect x="216" y="192" width="48" height="3" rx="1.5"/><rect x="216" y="202" width="48" height="3" rx="1.5"/><rect x="216" y="212" width="48" height="3" rx="1.5"/><rect x="216" y="222" width="48" height="3" rx="1.5"/><rect x="216" y="232" width="48" height="3" rx="1.5"/></g>
+</svg>

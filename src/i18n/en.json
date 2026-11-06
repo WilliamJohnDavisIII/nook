@@ -1,0 +1,5 @@
+{
+  "%n games": { "one": "%n game", "other": "%n games" },
+  "Played %n days ago": { "one": "Played yesterday", "other": "Played %n days ago" },
+  "Played %n hours ago": { "one": "Played an hour ago", "other": "Played %n hours ago" }
+}
