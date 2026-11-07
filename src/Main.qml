@@ -67,10 +67,53 @@ ApplicationWindow {
     function move(delta) {
         if (library.count === 0)
             return
-        shelf.currentIndex = (shelf.currentIndex + delta + library.count) % library.count
+        const next = (shelf.currentIndex + delta + library.count) % library.count
+        // Going off one end, the shelf drifts away and the other end drifts in.
+        // Scrolling there would rush past every game in between.
+        if (Math.abs(next - shelf.currentIndex) > 1 && !still) {
+            wrapTarget = next
+            wrapDirection = delta
+            shelfSound.play()
+            wrapAround.restart()
+            return
+        }
+        shelf.currentIndex = next
         selectedPath = library.gameAt(shelf.currentIndex).path
         if (library.count > 1)
             playMove()
+    }
+
+    property int wrapTarget: 0
+    property int wrapDirection: 1
+    // The shelf is on its way out, and what's on it is about to change.
+    property bool wrapLeaving: false
+    // Jumping there, not travelling.
+    property bool wrapJumping: false
+
+    SequentialAnimation {
+        id: wrapAround
+        PropertyAction { target: win; property: "wrapLeaving"; value: true }
+        ParallelAnimation {
+            NumberAnimation { target: shelf; property: "opacity"; to: 0; duration: 170; easing.type: Easing.InCubic }
+            NumberAnimation { target: shelfDrift; property: "x"; to: -win.wrapDirection * 70 * win.u; duration: 170; easing.type: Easing.InCubic }
+        }
+        ScriptAction {
+            script: {
+                if (win.wrapTarget < library.count) {
+                    win.wrapJumping = true
+                    shelf.currentIndex = win.wrapTarget
+                    shelf.positionViewAtIndex(win.wrapTarget, ListView.Center)
+                    win.wrapJumping = false
+                    win.selectedPath = library.gameAt(win.wrapTarget).path
+                }
+                shelfDrift.x = win.wrapDirection * 70 * win.u
+                win.wrapLeaving = false
+            }
+        }
+        ParallelAnimation {
+            NumberAnimation { target: shelf; property: "opacity"; to: 1; duration: 340; easing.type: Easing.OutCubic }
+            NumberAnimation { target: shelfDrift; property: "x"; to: 0; duration: 340; easing.type: Easing.OutCubic }
+        }
     }
 
     function openCase() {
@@ -115,7 +158,7 @@ ApplicationWindow {
     }
 
     function act(name) {
-        if (launcher.running || launching)
+        if (launcher.running || launching || wrapLeaving)
             return
         if (overlay === "quit") {
             if (name === "play")
@@ -188,6 +231,10 @@ ApplicationWindow {
         target: library
         function onModelReset() {
             win.picking = false
+            wrapAround.stop()
+            win.wrapLeaving = false
+            shelf.opacity = 1
+            shelfDrift.x = 0
             Qt.callLater(win.restoreSelection)
         }
     }
@@ -371,7 +418,8 @@ ApplicationWindow {
                 highlightRangeMode: ListView.StrictlyEnforceRange
                 preferredHighlightBegin: (width - cell) / 2
                 preferredHighlightEnd: (width + cell) / 2
-                highlightMoveDuration: win.still ? 0 : 340
+                highlightMoveDuration: win.still || win.wrapJumping ? 0 : 340
+                transform: Translate { id: shelfDrift }
                 highlightFollowsCurrentItem: true
                 boundsBehavior: Flickable.StopAtBounds
                 onMovementEnded: win.selectedPath = library.gameAt(currentIndex).path
