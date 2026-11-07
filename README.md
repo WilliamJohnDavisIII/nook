@@ -69,6 +69,8 @@ A game with its discs in a `.m3u`, or its tracks in a `.cue`, shows up once. So 
 
 The discs fan out from behind the case when you land on the game. Press Play to carry on, or open the case with the left button or `D` to boot straight into any disc.
 
+![Choosing disc 3 of Final Fantasy IX, with the discs fanned out from behind the case](docs/discs.png)
+
 | System | When the game asks for the next disc | Saves across discs |
 |---|---|---|
 | GameCube | Dolphin changes it for you | Shared |
@@ -84,9 +86,9 @@ Nook keeps playlists for loose discs in `~/.local/state/nook/`. To boot a PS1 ga
 | SNES | RetroArch, `snes9x` | `omarchy-install-gaming-retroarch` | Working |
 | PS1 | RetroArch, `mednafen_psx_hw` | The same | Working |
 | PS2 | [ARMSX2](https://github.com/ARMSX2/ARMSX2) on ARM | AppImage in `~/.local/opt/armsx2/` | Runs like a dream |
-| GameCube | Standalone Dolphin if installed, else RetroArch's `dolphin` core | `yay -S dolphin-emu-git` | **Not working yet** |
+| GameCube | Standalone Dolphin if installed, else RetroArch's `dolphin` core | `yay -S dolphin-emu-git` | Boots with standalone Dolphin |
 
-**GameCube on Apple Silicon:** RetroArch's Dolphin core crashes at startup here because its Vulkan renderer fails, and this RetroArch build has no desktop OpenGL to fall back on. Nook prefers standalone Dolphin when it's installed, but that route hasn't been run on real hardware yet. On other machines, the core needs Dolphin's `Sys` folder at `~/Games/bios/dolphin-emu/Sys`.
+**GameCube on Apple Silicon:** RetroArch's Dolphin core crashes at startup here because its Vulkan renderer fails, and this RetroArch build has no desktop OpenGL to fall back on, so install standalone Dolphin, which Nook prefers when it's there. On other machines, the core needs Dolphin's `Sys` folder at `~/Games/bios/dolphin-emu/Sys`.
 
 For ARMSX2, use the build for your memory page size: `16K-pages` on Asahi Linux, `4K-pages` on most other ARM systems. Nook picks the matching one, and the newest if you have several.
 
