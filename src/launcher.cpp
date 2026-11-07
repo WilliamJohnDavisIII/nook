@@ -2,6 +2,10 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QGuiApplication>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QScreen>
 #include <QStandardPaths>
 #include <csignal>
 #include <unistd.h>
@@ -33,6 +37,17 @@ LaunchPaths Launcher::defaultPaths(const QString &gamesRoot) {
     paths.retroarch = QStandardPaths::findExecutable("retroarch");
     paths.dolphin = QStandardPaths::findExecutable("dolphin-emu");
 
+    // Dolphin only runs through X11. With Hyprland's force_zero_scaling, X11 apps
+    // get raw pixels, so on a scaled screen its text and menus come out tiny unless
+    // it's told the scale itself.
+    const QString hyprctl = QStandardPaths::findExecutable("hyprctl");
+    if (!paths.dolphin.isEmpty() && !hyprctl.isEmpty() && qGuiApp && qGuiApp->primaryScreen()) {
+        QProcess option;
+        option.start(hyprctl, {"-j", "getoption", "xwayland:force_zero_scaling"});
+        if (option.waitForFinished(500))
+            paths.x11Scale = x11ScaleFor(qGuiApp->primaryScreen()->devicePixelRatio(), option.readAllStandardOutput());
+    }
+
     // The newest AppImage wins by version order, so updating ARMSX2 is just
     // dropping the new file in the folder. Only the build for this machine's
     // memory page size can run here.
@@ -44,6 +59,11 @@ LaunchPaths Launcher::defaultPaths(const QString &gamesRoot) {
     if (!builds.isEmpty())
         paths.armsx2 = builds.first().absoluteFilePath();
     return paths;
+}
+
+double Launcher::x11ScaleFor(double screenScale, const QByteArray &zeroScalingOption) {
+    const bool zeroScaling = QJsonDocument::fromJson(zeroScalingOption).object().value("int").toInt() == 1;
+    return zeroScaling && screenScale > 1 ? screenScale : 1;
 }
 
 LaunchPlan Launcher::plan(const QString &system, const QString &path, const LaunchPaths &paths) {
@@ -71,7 +91,13 @@ LaunchPlan Launcher::plan(const QString &system, const QString &path, const Laun
     // Linux among them) the RetroArch core can't start its renderer at all.
     if (system == "gc" && !paths.dolphin.isEmpty()) {
         plan.program = paths.dolphin;
-        plan.arguments = {"--batch", "--config=Dolphin.Display.Fullscreen=True", "--exec=" + path};
+        // The statistics question would otherwise pop up over a controller-only
+        // launch with no way to answer it from the pad, so it's answered here: no.
+        plan.arguments = {"--batch", "--config=Dolphin.Display.Fullscreen=True",
+                          "--config=Dolphin.Analytics.PermissionAsked=True", "--config=Dolphin.Analytics.Enabled=False",
+                          "--exec=" + path};
+        if (paths.x11Scale > 1)
+            plan.environment << "QT_SCALE_FACTOR=" + QString::number(paths.x11Scale);
         return plan;
     }
 
@@ -164,6 +190,8 @@ bool Launcher::launch(const QString &system, const QString &path) {
     process->setArguments(plan.arguments);
     process->setWorkingDirectory(QDir::homePath());
     process->setProcessChannelMode(QProcess::MergedChannels);
+    if (!plan.environment.isEmpty())
+        process->setEnvironment(QProcess::systemEnvironment() + plan.environment);
     // Its own process group, because an AppImage is a launcher wrapped around
     // the real program: stopping a game has to reach both.
     process->setChildProcessModifier([] { ::setsid(); });

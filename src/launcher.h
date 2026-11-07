@@ -8,6 +8,8 @@
 struct LaunchPlan {
     QString program;
     QStringList arguments;
+    // Extra environment variables, as NAME=value.
+    QStringList environment;
     // Why this game can't start, in words a person can act on. Empty when it can.
     QString problem;
 };
@@ -18,6 +20,9 @@ struct LaunchPaths {
     QString retroarch;
     QString armsx2;
     QString dolphin;
+    // What an X11 app must scale itself by to match the screen. 1 unless the
+    // compositor hands X11 apps raw pixels on a scaled display.
+    double x11Scale = 1;
 };
 
 // Starts a game in the right emulator and watches it until it ends.
@@ -39,6 +44,7 @@ public:
 
     static LaunchPlan plan(const QString &system, const QString &path, const LaunchPaths &paths);
     static LaunchPaths defaultPaths(const QString &gamesRoot);
+    static double x11ScaleFor(double screenScale, const QByteArray &zeroScalingOption);
     // Picked out so tests can pin down the rule for what counts as a failed launch.
     static bool isFailedStart(qint64 elapsedMs, int exitCode, QProcess::ExitStatus status, bool stopRequested);
 

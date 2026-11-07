@@ -140,6 +140,21 @@ private slots:
         QCOMPARE(plan.program, QString("/usr/bin/dolphin-emu"));
         QVERIFY(plan.arguments.contains("--exec=" + game));
         QVERIFY(plan.arguments.contains("--batch"));
+        QVERIFY(plan.arguments.contains("--config=Dolphin.Analytics.Enabled=False"));
+        QVERIFY(plan.environment.isEmpty());
+
+        paths.x11Scale = 2;
+        QCOMPARE(Launcher::plan("gc", game, paths).environment, QStringList{"QT_SCALE_FACTOR=2"});
+    }
+
+    void dolphinOnlyScalesItselfWhenTheCompositorWont()
+    {
+        QCOMPARE(Launcher::x11ScaleFor(2, R"({"option":"xwayland:force_zero_scaling","int":1,"set":true})"), 2.0);
+        QCOMPARE(Launcher::x11ScaleFor(1.5, R"({"int":1})"), 1.5);
+        // Without zero scaling the compositor stretches it, and scaling would double up.
+        QCOMPARE(Launcher::x11ScaleFor(2, R"({"int":0})"), 1.0);
+        QCOMPARE(Launcher::x11ScaleFor(1, R"({"int":1})"), 1.0);
+        QCOMPARE(Launcher::x11ScaleFor(2, ""), 1.0);
     }
 
     void missingPiecesAreExplained()
