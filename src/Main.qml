@@ -30,6 +30,9 @@ ApplicationWindow {
     property string overlay: ""
     property string selectedPath: ""
     property bool launching: false
+    // Choosing a disc: the case is open, and the left and right move between discs.
+    property bool picking: false
+    property int pickedDisc: 0
     property string toast: ""
     property string now: Qt.formatTime(new Date(), Qt.locale().timeFormat(Locale.ShortFormat))
 
@@ -68,6 +71,17 @@ ApplicationWindow {
         selectedPath = library.gameAt(shelf.currentIndex).path
         if (library.count > 1)
             playMove()
+    }
+
+    function openCase() {
+        if (library.count === 0)
+            return
+        const game = library.gameAt(shelf.currentIndex)
+        if (game.discs < 2)
+            return
+        pickedDisc = game.lastDisc
+        picking = true
+        shelfSound.play()
     }
 
     function restoreSelection() {
@@ -117,7 +131,20 @@ ApplicationWindow {
             }
             return
         }
+        if (picking) {
+            const discs = library.gameAt(shelf.currentIndex).discs
+            switch (name) {
+            case "left": pickedDisc = (pickedDisc - 1 + discs) % discs; playMove(); break
+            case "right": pickedDisc = (pickedDisc + 1) % discs; playMove(); break
+            case "play": play(); break
+            case "back":
+            case "discs": picking = false; shelfSound.play(); break
+            case "music": toggleMusic(); break
+            }
+            return
+        }
         switch (name) {
+        case "discs": openCase(); break
         case "left": move(-1); break
         case "right": move(1); break
         case "shelfPrevious": library.stepShelf(-1); shelfSound.play(); break
@@ -135,10 +162,15 @@ ApplicationWindow {
         interval: win.still ? 0 : 480
         onTriggered: {
             const game = library.gameAt(shelf.currentIndex)
-            if (launcher.launch(game.system, game.path))
-                library.markPlayed(game.path)
+            const disc = win.picking ? win.pickedDisc : -1
+            const file = library.launchPathFor(game.path, disc)
+            if (disc >= 0 && game.system === "ps1")
+                launcher.startOnDisc(file, disc, game.discFiles[disc])
+            if (launcher.launch(game.system, file))
+                library.markPlayed(game.path, disc)
             else
                 win.launching = false
+            win.picking = false
         }
     }
 
@@ -154,7 +186,10 @@ ApplicationWindow {
 
     Connections {
         target: library
-        function onModelReset() { Qt.callLater(win.restoreSelection) }
+        function onModelReset() {
+            win.picking = false
+            Qt.callLater(win.restoreSelection)
+        }
     }
 
     Connections {
@@ -190,6 +225,7 @@ ApplicationWindow {
     Shortcut { sequences: ["Down", "Tab"]; context: Qt.ApplicationShortcut; onActivated: win.act("shelfNext") }
     Shortcut { sequences: ["Return", "Enter", "Space"]; context: Qt.ApplicationShortcut; onActivated: win.act("play") }
     Shortcut { sequence: "Esc"; context: Qt.ApplicationShortcut; onActivated: win.act("back") }
+    Shortcut { sequence: "D"; context: Qt.ApplicationShortcut; onActivated: win.act("discs") }
     Shortcut { sequence: "M"; context: Qt.ApplicationShortcut; onActivated: win.act("music") }
     Shortcut { sequences: ["?", "Shift+/", "F1"]; context: Qt.ApplicationShortcut; onActivated: win.act("help") }
     Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; onActivated: Qt.quit() }
@@ -345,8 +381,11 @@ ApplicationWindow {
                     height: shelf.height
                     unit: win.u
                     reducedMotion: win.still
+                    pickedDisc: win.picking && index === shelf.currentIndex ? win.pickedDisc : -1
+                    receded: win.picking && index !== shelf.currentIndex
                     onActivated: win.play()
                     onPicked: {
+                        win.picking = false
                         shelf.currentIndex = index
                         win.selectedPath = path
                     }
@@ -382,7 +421,10 @@ ApplicationWindow {
                     font.pixelSize: Math.round(50 * win.u)
                 }
                 Text {
-                    text: win.current ? win.current.systemLabel + "  ·  " + win.playedText(win.current.lastPlayed) : ""
+                    text: !win.current ? ""
+                          : win.picking ? qsTr("Disc %1 of %2").arg(win.pickedDisc + 1).arg(win.current.discs)
+                          : [win.current.systemLabel].concat(win.current.discs > 1 ? [qsTr("%n discs", "", win.current.discs)] : [],
+                                                             [win.playedText(win.current.lastPlayed)]).join("  ·  ")
                     color: theme.foreground
                     opacity: 0.62
                     font.pixelSize: Math.round(18 * win.u)
@@ -396,10 +438,23 @@ ApplicationWindow {
                 anchors.bottomMargin: 66 * win.u
                 spacing: 30 * win.u
 
-                PadHint { visible: library.count > 0; position: win.confirmButton; keyLabel: "Enter"; label: qsTr("Play"); unit: win.u }
-                PadHint { position: "shoulder"; keyLabel: "Tab"; label: qsTr("Shelf"); unit: win.u }
-                PadHint { position: "north"; keyLabel: "M"; label: qsTr("Music"); unit: win.u }
-                PadHint { position: win.backButton; keyLabel: "Esc"; label: qsTr("Close"); unit: win.u }
+                PadHint {
+                    visible: library.count > 0
+                    position: win.confirmButton
+                    keyLabel: "Enter"
+                    label: win.picking ? qsTr("Play disc %1").arg(win.pickedDisc + 1) : qsTr("Play")
+                    unit: win.u
+                }
+                PadHint {
+                    visible: !win.picking && !!win.current && win.current.discs > 1
+                    position: "west"
+                    keyLabel: "D"
+                    label: qsTr("Discs")
+                    unit: win.u
+                }
+                PadHint { visible: !win.picking; position: "shoulder"; keyLabel: "Tab"; label: qsTr("Shelf"); unit: win.u }
+                PadHint { visible: !win.picking; position: "north"; keyLabel: "M"; label: qsTr("Music"); unit: win.u }
+                PadHint { position: win.backButton; keyLabel: "Esc"; label: win.picking ? qsTr("Back") : qsTr("Close"); unit: win.u }
             }
 
             // Nothing on this shelf yet.
@@ -471,6 +526,7 @@ ApplicationWindow {
                     model: [
                         [qsTr("Choose a game"), qsTr("D-pad or stick"), "← →"],
                         [qsTr("Play"), gamepad.nintendoLayout ? qsTr("A button") : qsTr("Bottom button"), "Enter"],
+                        [qsTr("Choose a disc"), qsTr("Left button"), "D"],
                         [qsTr("Change shelf"), qsTr("Shoulders or up/down"), "Tab"],
                         [qsTr("Music"), qsTr("Top button"), "M"],
                         [qsTr("This help"), qsTr("Start"), "F1"],

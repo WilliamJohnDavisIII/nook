@@ -43,7 +43,7 @@ int runCheck(bool asJson) {
     QJsonArray games;
     int problems = 0;
     for (const auto &game : library.all()) {
-        const LaunchPlan plan = Launcher::plan(game.system, game.path, paths);
+        const LaunchPlan plan = Launcher::plan(game.system, library.launchPathFor(game.path), paths);
         problems += plan.problem.isEmpty() ? 0 : 1;
         games.append(QJsonObject{{"title", game.title},
                                  {"system", game.system},

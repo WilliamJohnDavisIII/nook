@@ -8,7 +8,9 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QMap>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QSet>
 #include <QTextStream>
 #include <algorithm>
@@ -16,6 +18,10 @@
 namespace {
 QString stateKey(const QString &path) {
     return "played/" + QString::fromLatin1(QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha1).toHex());
+}
+
+QString discKey(const QString &path) {
+    return "disc/" + QString::fromLatin1(QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha1).toHex());
 }
 
 // Files a playlist or cue sheet refers to, resolved beside the file itself.
@@ -42,6 +48,11 @@ QStringList referencedFiles(const QString &path) {
         }
     }
     return found;
+}
+
+const QRegularExpression &discTag() {
+    static const QRegularExpression tag(R"(\s*\((?:Disc|Disk)\s*([0-9]+)[^\)]*\))", QRegularExpression::CaseInsensitiveOption);
+    return tag;
 }
 }
 
@@ -159,8 +170,44 @@ QStringList Library::scanFolder(const QString &directory, const QStringList &ext
     return files;
 }
 
+QList<QStringList> Library::groupDiscs(const QStringList &files) {
+    QList<QStringList> games;
+    QMap<QString, QMap<int, QString>> sets;
+    QSet<QString> unclear;
+    for (const auto &path : files) {
+        const QFileInfo info(path);
+        const auto match = discTag().match(info.completeBaseName());
+        if (!match.hasMatch()) {
+            games << QStringList{path};
+            continue;
+        }
+        QString name = info.completeBaseName();
+        name.remove(discTag());
+        const QString key = info.absolutePath() + "/" + name.toCaseFolded();
+        // Two copies of one disc, say an .iso and an .rvz, aren't a set.
+        if (sets[key].contains(match.captured(1).toInt()))
+            unclear.insert(key);
+        sets[key].insert(match.captured(1).toInt(), path);
+    }
+    for (const auto &path : files) {
+        const QFileInfo info(path);
+        if (!discTag().match(info.completeBaseName()).hasMatch())
+            continue;
+        QString name = info.completeBaseName();
+        name.remove(discTag());
+        const QString key = info.absolutePath() + "/" + name.toCaseFolded();
+        if (unclear.contains(key) || sets.value(key).size() < 2)
+            games << QStringList{path};
+    }
+    for (auto set = sets.cbegin(); set != sets.cend(); ++set)
+        if (!unclear.contains(set.key()) && set->size() >= 2)
+            games << set->values();
+    return games;
+}
+
 Library::Library(const QString &gamesRoot, const QString &statePath, Artwork *artwork, QObject *parent)
-    : QAbstractListModel(parent), m_gamesRoot(gamesRoot), m_artwork(artwork),
+    : QAbstractListModel(parent), m_gamesRoot(gamesRoot), m_stateDirectory(QFileInfo(statePath).absolutePath()),
+      m_artwork(artwork),
       m_state(std::make_unique<QSettings>(statePath, QSettings::IniFormat)) {
     m_debounce.setSingleShot(true);
     m_debounce.setInterval(800);
@@ -193,16 +240,34 @@ void Library::rescan() {
 
     QList<Game> games;
     for (const auto &system : systems()) {
-        for (const auto &path : scanFolder(romsPath() + "/" + system.id, system.extensions)) {
+        for (const auto &set : groupDiscs(scanFolder(romsPath() + "/" + system.id, system.extensions))) {
+            // A set goes by its first disc, which keeps that disc's art and history.
+            const QString &path = set.first();
             Game game;
             game.path = path;
             game.baseName = QFileInfo(path).completeBaseName();
             game.title = cleanTitle(game.baseName);
             game.system = system.id;
-            const QStringList played = m_state->value(stateKey(path)).toString().split(',');
-            if (played.size() == 2) {
-                game.lastPlayed = played[0].toLongLong();
-                game.playCount = played[1].toInt();
+            if (set.size() > 1) {
+                QString name = game.baseName;
+                name.remove(discTag());
+                game.title = cleanTitle(name);
+                game.discs = set;
+                game.discCount = set.size();
+            } else if (path.endsWith(".m3u", Qt::CaseInsensitive)) {
+                const QStringList listed = referencedFiles(path);
+                if (listed.size() > 1) {
+                    game.discs = listed;
+                    game.discCount = listed.size();
+                }
+            }
+            // Whichever disc was played last, from before they were grouped too.
+            for (const auto &disc : set) {
+                const QStringList played = m_state->value(stateKey(disc)).toString().split(',');
+                if (played.size() == 2 && played[0].toLongLong() > game.lastPlayed) {
+                    game.lastPlayed = played[0].toLongLong();
+                    game.playCount = played[1].toInt();
+                }
             }
             if (m_artwork)
                 game.art = m_artwork->cached(system.id, game.baseName);
@@ -290,13 +355,15 @@ QVariant Library::data(const QModelIndex &index, int role) const {
     case ArtRole: return game.art;
     case LastPlayedRole: return game.lastPlayed;
     case HueRole: return hueFor(game.title);
+    case DiscsRole: return game.discCount;
     default: return {};
     }
 }
 
 QHash<int, QByteArray> Library::roleNames() const {
     return {{TitleRole, "title"},   {SystemRole, "system"},       {SystemLabelRole, "systemLabel"}, {PathRole, "path"},
-            {ArtRole, "art"},       {LastPlayedRole, "lastPlayed"}, {HueRole, "hue"}};
+            {ArtRole, "art"},       {LastPlayedRole, "lastPlayed"}, {HueRole, "hue"},
+            {DiscsRole, "discs"}};
 }
 
 int Library::indexOfPath(const QString &path) const {
@@ -316,16 +383,54 @@ QVariantMap Library::gameAt(int row) const {
             {"path", data(at, PathRole)},
             {"art", data(at, ArtRole)},
             {"lastPlayed", data(at, LastPlayedRole)},
-            {"hue", data(at, HueRole)}};
+            {"hue", data(at, HueRole)},
+            {"discs", data(at, DiscsRole)},
+            {"discFiles", m_all[m_visible[row]].discs},
+            {"lastDisc", lastDisc(m_all[m_visible[row]])}};
 }
 
-void Library::markPlayed(const QString &path) {
+int Library::lastDisc(const Game &game) const {
+    const int disc = m_state->value(discKey(game.path), 0).toInt();
+    return disc >= 0 && disc < game.discs.size() ? disc : 0;
+}
+
+QString Library::launchPathFor(const QString &path, int disc) const {
+    for (const auto &game : m_all) {
+        if (game.path != path)
+            continue;
+        if (game.discs.isEmpty())
+            return path;
+        const int chosen = disc >= 0 && disc < game.discs.size() ? disc : lastDisc(game);
+        if (game.system == "ps2")
+            return game.discs[chosen];
+
+        QStringList order = game.discs;
+        if (game.system != "ps1")
+            std::rotate(order.begin(), order.begin() + chosen, order.end());
+        if (path.endsWith(".m3u", Qt::CaseInsensitive) && order == game.discs)
+            return path;
+
+        // Named after the game's own file, because RetroArch names saves after what
+        // it loads, and those saves should still be there.
+        const QString folder = m_stateDirectory + "/discs/" + QString::fromLatin1(QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha1).toHex().left(12));
+        QDir().mkpath(folder);
+        QSaveFile playlist(folder + "/" + game.baseName + ".m3u");
+        if (!playlist.open(QIODevice::WriteOnly) || playlist.write(order.join('\n').toUtf8() + '\n') < 0 || !playlist.commit())
+            return path;
+        return playlist.fileName();
+    }
+    return path;
+}
+
+void Library::markPlayed(const QString &path, int disc) {
     for (auto &game : m_all) {
         if (game.path != path)
             continue;
         game.lastPlayed = QDateTime::currentMSecsSinceEpoch();
         ++game.playCount;
         m_state->setValue(stateKey(path), QStringLiteral("%1,%2").arg(game.lastPlayed).arg(game.playCount));
+        if (disc >= 0)
+            m_state->setValue(discKey(path), disc);
         m_state->sync();
         const int row = indexOfPath(path);
         if (row >= 0)

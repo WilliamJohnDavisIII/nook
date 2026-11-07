@@ -1,6 +1,9 @@
 #include "launcher.h"
 
 #include <QDir>
+#include <QFile>
+#include <QRegularExpression>
+#include <QSaveFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonDocument>
@@ -48,6 +51,10 @@ LaunchPaths Launcher::defaultPaths(const QString &gamesRoot) {
             paths.x11Scale = x11ScaleFor(qGuiApp->primaryScreen()->devicePixelRatio(), option.readAllStandardOutput());
     }
 
+    QFile retroarchConfig(QDir::homePath() + "/.config/retroarch/retroarch.cfg");
+    if (retroarchConfig.open(QIODevice::ReadOnly | QIODevice::Text))
+        paths.discRecords = discRecordFolder(QString::fromUtf8(retroarchConfig.readAll()), QDir::homePath());
+
     // The newest AppImage wins by version order, so updating ARMSX2 is just
     // dropping the new file in the folder. Only the build for this machine's
     // memory page size can run here.
@@ -59,6 +66,31 @@ LaunchPaths Launcher::defaultPaths(const QString &gamesRoot) {
     if (!builds.isEmpty())
         paths.armsx2 = builds.first().absoluteFilePath();
     return paths;
+}
+
+QString Launcher::discRecordFolder(const QString &retroarchConfig, const QString &home) {
+    const auto setting = [&](const char *name) {
+        const QRegularExpression line(QStringLiteral(R"re(^\s*%1\s*=\s*"([^"]*)")re").arg(QLatin1String(name)),
+                                      QRegularExpression::MultilineOption);
+        return line.match(retroarchConfig).captured(1);
+    };
+    QString folder = setting("savefile_directory");
+    if (folder.isEmpty() || folder == "default" || folder.startsWith(':'))
+        return {};
+    if (folder.startsWith('~'))
+        folder = home + folder.mid(1);
+    // The folder sorted saves go in is named after the core's own name for itself.
+    return setting("sort_savefiles_enable") == "true" ? folder + "/Beetle PSX HW" : folder;
+}
+
+void Launcher::startOnDisc(const QString &playlist, int index, const QString &discFile) {
+    if (m_paths.discRecords.isEmpty())
+        return;
+    QDir().mkpath(m_paths.discRecords);
+    QSaveFile record(m_paths.discRecords + "/" + QFileInfo(playlist).completeBaseName() + ".ldci");
+    const QJsonObject note{{"version", "1.0"}, {"image_index", index}, {"image_path", discFile}};
+    if (record.open(QIODevice::WriteOnly))
+        record.write(QJsonDocument(note).toJson()), record.commit();
 }
 
 double Launcher::x11ScaleFor(double screenScale, const QByteArray &zeroScalingOption) {
@@ -95,6 +127,8 @@ LaunchPlan Launcher::plan(const QString &system, const QString &path, const Laun
         // launch with no way to answer it from the pad, so it's answered here: no.
         plan.arguments = {"--batch", "--config=Dolphin.Display.Fullscreen=True",
                           "--config=Dolphin.Analytics.PermissionAsked=True", "--config=Dolphin.Analytics.Enabled=False",
+                          // When the game asks for the next disc, put it in.
+                          "--config=Dolphin.Core.AutoDiscChange=True",
                           "--exec=" + path};
         if (paths.x11Scale > 1)
             plan.environment << "QT_SCALE_FACTOR=" + QString::number(paths.x11Scale);

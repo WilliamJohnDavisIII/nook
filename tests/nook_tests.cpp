@@ -1,5 +1,7 @@
 #include <QDir>
 #include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -56,6 +58,110 @@ private slots:
         write(dir.filePath("Saga.m3u"), "Saga (Disc 1).chd\nSaga (Disc 2).chd\n");
         const auto found = Library::scanFolder(dir.path(), {"m3u", "chd"});
         QCOMPARE(found, QStringList{dir.filePath("Saga.m3u")});
+    }
+
+    void looseDiscsBecomeOneGame()
+    {
+        const auto games = Library::groupDiscs({"/g/Saga (USA) (Disc 2).rvz", "/g/Saga (USA) (Disc 1).rvz", "/g/Solo.rvz",
+                                                "/g/Lone (Disc 1).rvz", "/g/Copy (Disc 1).iso", "/g/Copy (Disc 1).rvz",
+                                                "/g/Copy (Disc 2).rvz", "/h/Saga (USA) (Disc 3).rvz"});
+        QVERIFY(games.contains(QStringList({"/g/Saga (USA) (Disc 1).rvz", "/g/Saga (USA) (Disc 2).rvz"})));
+        QVERIFY(games.contains(QStringList{"/g/Solo.rvz"}));
+        QVERIFY(games.contains(QStringList{"/g/Lone (Disc 1).rvz"}));
+        // Another folder is another game, and duplicates of a disc stay as they are.
+        QVERIFY(games.contains(QStringList{"/h/Saga (USA) (Disc 3).rvz"}));
+        QVERIFY(games.contains(QStringList{"/g/Copy (Disc 2).rvz"}));
+        QCOMPARE(games.size(), 7);
+    }
+
+    void aDiscSetIsOneGameThatBootsAnyDisc()
+    {
+        QTemporaryDir games, state;
+        QDir(games.path()).mkpath("roms/gc");
+        QDir(games.path()).mkpath("roms/ps1");
+        QDir(games.path()).mkpath("roms/ps2");
+        const QString one = games.filePath("roms/gc/Saga (USA) (Disc 1).rvz");
+        const QString two = games.filePath("roms/gc/Saga (USA) (Disc 2).rvz");
+        const QString quest = games.filePath("roms/ps1/Quest (Disc 1).chd");
+        const QString questTwo = games.filePath("roms/ps1/Quest (Disc 2).chd");
+        const QString epic = games.filePath("roms/ps2/Epic (Disc 1).iso");
+        const QString epicTwo = games.filePath("roms/ps2/Epic (Disc 2).iso");
+        for (const auto &file : {one, two, quest, questTwo, epic, epicTwo})
+            write(file, "x");
+        const QString statePath = state.filePath("state.ini");
+        {
+            // Played back when each disc was its own entry.
+            Library before(games.path(), statePath);
+            before.markPlayed(one);
+        }
+
+        Library library(games.path(), statePath);
+        QCOMPARE(library.total(), 3);
+        library.setShelf("gc");
+        QCOMPARE(library.rowCount(), 1);
+        QCOMPARE(library.gameAt(0)["title"].toString(), QString("Saga"));
+        QCOMPARE(library.gameAt(0)["discs"].toInt(), 2);
+        QVERIFY(library.gameAt(0)["lastPlayed"].toLongLong() > 0);
+
+        const auto contents = [](const QString &path) {
+            QFile file(path);
+            return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
+        };
+        // Dolphin boots whatever's listed first, and finds the rest when asked.
+        const QString first = library.launchPathFor(one);
+        QVERIFY(first.startsWith(state.path()));
+        QCOMPARE(QFileInfo(first).fileName(), QString("Saga (USA) (Disc 1).m3u"));
+        QCOMPARE(contents(first), one + "\n" + two + "\n");
+        QCOMPARE(contents(library.launchPathFor(one, 1)), two + "\n" + one + "\n");
+        QCOMPARE(QDir(games.filePath("roms/gc")).entryList(QDir::Files).size(), 2);
+
+        // RetroArch's order never moves: it's told the disc another way.
+        QCOMPARE(contents(library.launchPathFor(quest, 1)), quest + "\n" + questTwo + "\n");
+
+        // ARMSX2 takes the disc itself.
+        QCOMPARE(library.launchPathFor(epic, 1), epicTwo);
+        QCOMPARE(library.launchPathFor(epic), epic);
+
+        // The disc you chose is the one you come back to.
+        library.markPlayed(epic, 1);
+        QCOMPARE(library.launchPathFor(epic), epicTwo);
+        library.setShelf("ps2");
+        QCOMPARE(library.gameAt(0)["lastDisc"].toInt(), 1);
+    }
+
+    void retroArchIsToldWhichDiscByItsOwnNote()
+    {
+        QCOMPARE(Launcher::discRecordFolder("savefile_directory = \"~/saves\"\nsort_savefiles_enable = \"true\"\n", "/home/a"),
+                 QString("/home/a/saves/Beetle PSX HW"));
+        QCOMPARE(Launcher::discRecordFolder("savefile_directory = \"/s\"\nsort_savefiles_enable = \"false\"\n", "/home/a"), QString("/s"));
+        QCOMPARE(Launcher::discRecordFolder("savefile_directory = \"default\"\n", "/home/a"), QString());
+        QCOMPARE(Launcher::discRecordFolder("", "/home/a"), QString());
+
+        QTemporaryDir saves;
+        LaunchPaths paths;
+        paths.discRecords = saves.path();
+        Launcher launcher(paths);
+        launcher.startOnDisc("/state/Saga (USA).m3u", 2, "/g/Saga (Disc 3).chd");
+        QFile record(saves.filePath("Saga (USA).ldci"));
+        QVERIFY(record.open(QIODevice::ReadOnly));
+        const QJsonObject note = QJsonDocument::fromJson(record.readAll()).object();
+        QCOMPARE(note["image_index"].toInt(), 2);
+        QCOMPARE(note["image_path"].toString(), QString("/g/Saga (Disc 3).chd"));
+    }
+
+    void playlistsCountTheirDiscs()
+    {
+        QTemporaryDir games, state;
+        QDir(games.path()).mkpath("roms/ps1");
+        write(games.filePath("roms/ps1/Saga (Disc 1).cue"), "x");
+        write(games.filePath("roms/ps1/Saga (Disc 2).cue"), "x");
+        const QString list = games.filePath("roms/ps1/Saga.m3u");
+        write(list, "Saga (Disc 1).cue\nSaga (Disc 2).cue\n");
+        Library library(games.path(), state.filePath("s.ini"));
+        QCOMPARE(library.rowCount(), 1);
+        QCOMPARE(library.gameAt(0)["discs"].toInt(), 2);
+        QCOMPARE(library.launchPathFor(list), list);
+        QCOMPARE(library.launchPathFor(list, 1), list);
     }
 
     void libraryScansFiltersAndRemembers()
@@ -251,6 +357,15 @@ private slots:
         QVERIFY(input.update(south, 100, false).isEmpty());
         QVERIFY(input.update(InputFrame{}, 200, false).isEmpty());
         QCOMPARE(input.update(south, 300, false), QStringList{"play"});
+    }
+
+    void theLeftButtonOpensTheCase()
+    {
+        InputInterpreter input;
+        InputFrame west;
+        west.west = true;
+        QCOMPARE(input.update(west, 0, false), QStringList{"discs"});
+        QVERIFY(input.update(west, 100, false).isEmpty());
     }
 
     void leavingAGameTakesAHeldCombo()

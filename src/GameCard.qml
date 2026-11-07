@@ -16,6 +16,14 @@ Item {
     required property string art
     required property var lastPlayed
     required property int hue
+    required property int discs
+
+    // The disc being chosen, while the case is open. -1 otherwise.
+    property int pickedDisc: -1
+    // Another game's case is open, so this one steps back.
+    property bool receded: false
+    readonly property bool picking: pickedDisc >= 0
+    z: picking ? 1 : 0
 
     property real unit: 1
     property bool reducedMotion: false
@@ -74,7 +82,7 @@ Item {
         width: parent.width
         height: parent.height
         scale: card.isCurrent ? 1.0 : 0.76
-        opacity: card.isCurrent ? 1.0 : 0.74
+        opacity: card.receded ? 0.12 : card.isCurrent ? 1.0 : 0.74
         transformOrigin: Item.Bottom
 
         Behavior on scale { enabled: !card.reducedMotion; NumberAnimation { duration: 340; easing.type: Easing.OutCubic } }
@@ -97,6 +105,73 @@ Item {
             }
             layer.enabled: true
             layer.effect: MultiEffect { blurEnabled: true; blur: 0.7; blurMax: 20; autoPaddingEnabled: true }
+        }
+
+        // The discs, coming out past the far edge of the case and turned with it.
+        // Drawn together and cut at that edge, so dimming a game on the shelf can't
+        // show them through its cover, or through each other. Tucked in on the shelf;
+        // they slide out when the game is chosen, the last disc going furthest.
+        Item {
+            id: sleeve
+            visible: card.discs > 1
+            x: box.cornerX + card.boxWidth - overlap
+            y: box.topY
+            width: diameter * (card.picking ? 1.04 : 0.5)
+            height: card.boxHeight
+            layer.enabled: visible
+            layer.smooth: true
+            transform: Matrix4x4 { matrix: card.turned(card.radians, -card.boxWidth + sleeve.overlap, card.boxHeight) }
+
+            readonly property real overlap: Math.max(1, card.unit)
+            // Real proportions: an 8 cm disc in a GameCube case, 12 cm in the others.
+            readonly property real diameter: Math.min(height * 0.9, card.boxWidth * (card.system === "gc" ? 0.68 : 0.88))
+            readonly property int shown: Math.min(card.discs, 6)
+
+            Repeater {
+                model: sleeve.visible ? sleeve.shown : 0
+                delegate: Item {
+                    id: held
+                    required property int index
+                    readonly property real place: (index + 1) / sleeve.shown
+                    readonly property bool chosen: card.pickedDisc === index
+                    width: sleeve.diameter
+                    height: width
+                    y: (sleeve.height - height) / 2 - (chosen ? height * 0.05 : 0)
+                    z: chosen ? sleeve.shown + 1 : sleeve.shown - index
+                    x: -width + sleeve.overlap + width * (card.picking ? 1 : card.isCurrent ? 0.44 : 0.1) * place
+                    opacity: card.picking && !chosen ? 0.5 : 1
+                    Behavior on x {
+                        enabled: !card.reducedMotion
+                        NumberAnimation { duration: 460; easing.type: Easing.OutCubic }
+                    }
+                    Behavior on y {
+                        enabled: !card.reducedMotion
+                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    }
+                    Behavior on opacity {
+                        enabled: !card.reducedMotion
+                        NumberAnimation { duration: 200 }
+                    }
+
+                    Disc {
+                        anchors.fill: parent
+                        system: card.system
+                        hue: card.hue
+                        // Light slides across the grooves as the case sways.
+                        rotation: held.index * 41 + card.sway * 9
+                    }
+                    Text {
+                        visible: card.picking
+                        // Out on the part of the disc the one in front leaves showing.
+                        x: parent.width * 0.88 - width / 2
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: held.index + 1
+                        color: card.system === "ps1" ? "white" : "#26262c"
+                        font.family: "Noto Serif"
+                        font.pixelSize: Math.round(parent.width * 0.1)
+                    }
+                }
+            }
         }
 
         // The box. Its corner, where spine meets front, is what's nearest you.

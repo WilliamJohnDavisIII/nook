@@ -73,6 +73,7 @@ QStringList InputInterpreter::update(const InputFrame &frame, qint64 nowMs, bool
     edge(frame.south, m_was.south, "play", actions);
     edge(frame.east, m_was.east, "back", actions);
     edge(frame.north, m_was.north, "music", actions);
+    edge(frame.west, m_was.west, "discs", actions);
     edge(frame.start, m_was.start, "help", actions);
     m_was.left = frame.left;
     m_was.right = frame.right;

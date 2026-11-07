@@ -25,6 +25,10 @@ struct Game {
     QString art;
     qint64 lastPlayed = 0;
     int playCount = 0;
+    // Every disc in order, for a game on more than one. Empty otherwise.
+    QStringList discs;
+    // How many discs it came on, however they're stored.
+    int discCount = 1;
 };
 
 // Every game in ~/Games/roms, read-only. Picks up new files on its own, so
@@ -38,7 +42,7 @@ class Library : public QAbstractListModel {
     Q_PROPERTY(QString romsPath READ romsPath CONSTANT)
 
 public:
-    enum Role { TitleRole = Qt::UserRole + 1, SystemRole, SystemLabelRole, PathRole, ArtRole, LastPlayedRole, HueRole };
+    enum Role { TitleRole = Qt::UserRole + 1, SystemRole, SystemLabelRole, PathRole, ArtRole, LastPlayedRole, HueRole, DiscsRole };
 
     explicit Library(const QString &gamesRoot, const QString &statePath, Artwork *artwork = nullptr,
                      QObject *parent = nullptr);
@@ -58,7 +62,13 @@ public:
     Q_INVOKABLE void rescan();
     Q_INVOKABLE int indexOfPath(const QString &path) const;
     Q_INVOKABLE QVariantMap gameAt(int row) const;
-    Q_INVOKABLE void markPlayed(const QString &path);
+    // With a disc, also remembers that as the one this game was left on.
+    Q_INVOKABLE void markPlayed(const QString &path, int disc = -1);
+    // What to hand the emulator to boot a disc (-1: the one it was left on).
+    // RetroArch takes a playlist in a fixed order and is told the disc separately,
+    // Dolphin boots whatever a playlist lists first, and ARMSX2 only takes one
+    // disc. Playlists Nook writes live in its state folder, not with the games.
+    Q_INVOKABLE QString launchPathFor(const QString &path, int disc = -1) const;
     Q_INVOKABLE void stepShelf(int delta);
 
     static const QList<SystemInfo> &systems();
@@ -70,6 +80,9 @@ public:
     // The playable files in a folder: a .cue hides the tracks it lists, and an
     // .m3u hides the discs it lists, so one game shows up once.
     static QStringList scanFolder(const QString &directory, const QStringList &extensions);
+    // Sorts files into games: "Saga (Disc 1)" and "Saga (Disc 2)" in one folder
+    // become one list, in disc order. Anything else is a list of one.
+    static QList<QStringList> groupDiscs(const QStringList &files);
 
 signals:
     void listChanged();
@@ -80,8 +93,10 @@ private:
     void armWatcher();
     void applyArt(const QString &path, const QString &art);
     int hueFor(const QString &title) const;
+    int lastDisc(const Game &game) const;
 
     QString m_gamesRoot;
+    QString m_stateDirectory;
     QString m_shelf;
     QList<Game> m_all;
     QList<int> m_visible;

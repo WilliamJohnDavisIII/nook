@@ -63,7 +63,19 @@ Nook doesn't come with any games or BIOS files. Bring your own:
 └── music/               ambient music (optional)
 ```
 
-A game with its discs in a `.m3u`, or its tracks in a `.cue`, shows up once.
+A game with its discs in a `.m3u`, or its tracks in a `.cue`, shows up once. So do games with loose files named `(Disc 1)`, `(Disc 2)` in one folder.
+
+### Games on more than one disc
+
+The discs fan out from behind the case when you land on the game. Press Play to carry on, or open the case with the left button or `D` to boot straight into any disc.
+
+| System | When the game asks for the next disc | Saves across discs |
+|---|---|---|
+| GameCube | Dolphin changes it for you | Shared |
+| PS1 | Change it in RetroArch's menu: Home, then Disc Control | Shared, one memory card per game |
+| PS2 | ARMSX2 can't swap from here: save, leave, and boot the next disc | Shared |
+
+Nook keeps playlists for loose discs in `~/.local/state/nook/`. To boot a PS1 game on a chosen disc, it updates RetroArch's own last-disc note, the `.ldci` file beside your saves. It never touches the saves themselves.
 
 ## The emulators
 
@@ -86,6 +98,7 @@ If something's missing when you try to play, Nook tells you what.
 |---|---|---|
 | Choose a game | D-pad or left stick | `←` `→` or `H` `L` |
 | Play | A on 8BitDo pads, the bottom button on others | `Enter` or `Space` |
+| Choose a disc | Left button | `D` |
 | Change shelf | Shoulders, or up and down | `Tab` or `↑` `↓` |
 | Music on or off | Top button | `M` |
 | Help | Start | `F1` or `?` |

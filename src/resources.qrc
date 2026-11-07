@@ -4,6 +4,7 @@
         <file alias="Backdrop.qml">Backdrop.qml</file>
         <file alias="GameCard.qml">GameCard.qml</file>
         <file alias="GameCover.qml">GameCover.qml</file>
+        <file alias="Disc.qml">Disc.qml</file>
         <file alias="ShelfTabs.qml">ShelfTabs.qml</file>
         <file alias="PadHint.qml">PadHint.qml</file>
         <file alias="NoteOverlay.qml">NoteOverlay.qml</file>
